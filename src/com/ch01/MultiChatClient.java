@@ -163,7 +163,7 @@ public class MultiChatClient implements ActionListener{
 class ClientReceiver extends Thread{//서버로부터 받아서 화면에 출력만 해주면 됨
 	Socket socket = null;
 	MultiChatClient mcc = null;
-	
+	ObjectInputStream ois = null;
 	ClientReceiver(Socket socket, MultiChatClient mcc){
 		this.mcc = mcc;
 		this.socket = socket;
@@ -171,7 +171,7 @@ class ClientReceiver extends Thread{//서버로부터 받아서 화면에 출력
 	public void run() {
 		//System.out.println("진입");
 		try {
-			ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
+			ois = new ObjectInputStream(socket.getInputStream());
 			
 			while(true) {
 				//System.out.println("여기까지 들어오니?");
@@ -182,6 +182,13 @@ class ClientReceiver extends Thread{//서버로부터 받아서 화면에 출력
 			}
 		} catch (Exception e) {
 			// TODO: handle exception
+		}finally {
+			try {
+				ois.close();
+				socket.close();
+			} catch (Exception e2) {
+				// TODO: handle exception
+			}
 		}
 	}
 }

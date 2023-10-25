@@ -11,11 +11,14 @@ public class MultiChatServer extends Thread{
 	Socket socket = null;
 	List<ChatServerThread> clientThread;//클라이언트 스레드를 담을 ArrayList
 	//클라이언트가 접속했을때 리스트에 add되어 관리된다.
-	List<String> nickName = new ArrayList<>();
+	List<String> nickName;
 	//스레드마다 닉네임을 관리하기위해 리스트를 하나 더 만듦
 	
+	int cnt = 1;//사용자에게 초기번호를 부여하기 위한 전역변수 선언
+	
 	MultiChatServer(){
-		clientThread = new ArrayList<>();
+		clientThread = new ArrayList<>();//스레드관리용 리스트생성
+		nickName = new ArrayList<>();//클라이언트 닉네임 리스트생성
 		Collections.synchronizedList(clientThread);
 		serverView = new MultiChatServerView();
 	}
@@ -24,7 +27,7 @@ public class MultiChatServer extends Thread{
 		int port = 5000;
 		try {
 			serverSocket = new ServerSocket(port);
-			//System.out.println("서버가 준비되었습니다.");
+			System.out.println("서버가 준비되었습니다.");
 			//서버가 준비됨
 			while(true) {
 				socket = serverSocket.accept();
@@ -63,10 +66,10 @@ class ChatServerThread extends Thread{
 			e.printStackTrace();
 		}
 		mcs.clientThread.add(this);
-		String nickName = socket.getInetAddress()+"";
-		System.out.println(nickName);
-		mcs.nickName.add(nickName);
-		broadcast(nickName + "님이 입장하셨습니다.");
+		String firstNickName = "사용자"+mcs.cnt;//클라이언트가 접속하면 초기닉네임을 지정
+		mcs.cnt++;//클라이언트가 들어오면 카운트 올림
+		//System.out.println(nickName);
+		mcs.nickName.add(firstNickName);//리스트에 닉네임 추가
 	}
 	public void broadcast(String msg) {//모든 사용자에게 메시지를 보냄
 		try {
@@ -79,7 +82,7 @@ class ChatServerThread extends Thread{
 			for(int i = 0; i < mcs.clientThread.size(); i++) {
 				mcs.clientThread.get(i).oos.writeObject("["+id+"]"+msg);
 			}//List를 순회하면서 스레드마다 oos에 write 해준다.
-			mcs.serverView.jta_display.append(msg+"\n");
+			mcs.serverView.jta_display.append(msg+"\n");//서버뷰에 출력
 		} catch (Exception e) {
 			
 		}
@@ -92,19 +95,21 @@ class ChatServerThread extends Thread{
 			try {
 				String msg = ois.readObject().toString();
 				int protocol = 0;
-				StringTokenizer st = null;
+				StringTokenizer st = null;//토크나이저 생성
 				if(msg!=null) {
-					st = new StringTokenizer(msg,"|");
+					st = new StringTokenizer(msg,"|");// "|"를 기준으로 스트링을분해
 					protocol = Integer.parseInt(st.nextToken());
+					//Srting 타입의 토큰을 int로 변환
 				}
-				switch(protocol) {
+				switch(protocol) {//protocol에 따라 다르게 처리하는 구문
 				
-					case Protocol.ROOM_IN: {
+					case Protocol.ROOM_IN: {//입장시 멘트
+						
 						st.nextToken();
 						broadcast(st.nextToken());
 						//System.out.println(this);
 					}
-					case Protocol.ROOM_OUT: {
+					case Protocol.ROOM_OUT: {//퇴장시 멘트
 						for(int i = 0; i < mcs.clientThread.size(); i++) {
 							if(this == mcs.clientThread.get(i)) {
 								//System.out.println(st.nextToken()+"님이 나가셨습니다.");
@@ -124,15 +129,15 @@ class ChatServerThread extends Thread{
 							//System.out.println(mcs.clientThread.size());
 						}
 					}
-					case Protocol.SET_ID: {
+					case Protocol.SET_ID: {//아이디 변경시 멘트
 						for(int i = 0; i < mcs.clientThread.size(); i++) {
 							if(this == mcs.clientThread.get(i)) {
 								mcs.nickName.set(i, st.nextToken());
-								broadcast(mcs.nickName.get(i)+"로 닉네임이 설정되었습니다.");
+								broadcast(mcs.nickName.get(i)+"로 닉네임이 변경되었습니다.");
 							}
 						}
 					}
-					case Protocol.MESSAGE: {
+					case Protocol.MESSAGE: {//일반 메시지 처리
 						st.nextToken();
 						broadcast(st.nextToken());				
 					}
